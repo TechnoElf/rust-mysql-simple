@@ -353,6 +353,7 @@ impl Conn {
         }
     }
 
+    #[cfg(any(feature = "tls-native", feature = "tls-rust"))]
     fn switch_to_ssl(&mut self, ssl_opts: SslOpts) -> Result<()> {
         let stream = self.0.stream.take().expect("incomplete conn");
         let (in_buf, out_buf, codec, stream) = stream.destruct();
@@ -360,6 +361,11 @@ impl Conn {
         let stream = MySyncFramed::construct(in_buf, out_buf, codec, stream);
         self.0.stream = Some(stream);
         Ok(())
+    }
+
+    #[cfg(not(any(feature = "tls-native", feature = "tls-rust")))]
+    fn switch_to_ssl(&mut self, _ssl_opts: SslOpts) -> Result<()> {
+        unreachable!()
     }
 
     fn connect_stream(&mut self) -> Result<()> {
@@ -477,6 +483,7 @@ impl Conn {
                 if !handshake
                     .capabilities()
                     .contains(CapabilityFlags::CLIENT_SSL)
+                    || cfg!(not(any(feature = "tls-native", feature = "tls-rust")))
                 {
                     return Err(DriverError(TlsNotSupported));
                 } else {

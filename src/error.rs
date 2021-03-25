@@ -72,6 +72,7 @@ pub enum Error {
 
 impl Error {
     #[doc(hidden)]
+    #[cfg(any(feature = "tls-native", feature = "tls-rust"))]
     pub fn is_connectivity_error(&self) -> bool {
         match self {
             Error::IoError(_)
@@ -85,9 +86,23 @@ impl Error {
             | Error::FromRowError(_) => false,
         }
     }
+
+    #[cfg(not(any(feature = "tls-native", feature = "tls-rust")))]
+    pub fn is_connectivity_error(&self) -> bool {
+        match self {
+            Error::IoError(_)
+            | Error::DriverError(_)
+            | Error::CodecError(_) => true,
+            Error::MySqlError(_)
+            | Error::UrlError(_)
+            | Error::FromValueError(_)
+            | Error::FromRowError(_) => false,
+        }
+    }
 }
 
 impl error::Error for Error {
+    #[cfg(any(feature = "tls-native", feature = "tls-rust"))]
     fn description(&self) -> &str {
         match *self {
             Error::IoError(_) => "I/O Error",
@@ -102,6 +117,20 @@ impl error::Error for Error {
         }
     }
 
+    #[cfg(not(any(feature = "tls-native", feature = "tls-rust")))]
+    fn description(&self) -> &str {
+        match *self {
+            Error::IoError(_) => "I/O Error",
+            Error::CodecError(_) => "protocol codec error",
+            Error::MySqlError(_) => "MySql server error",
+            Error::DriverError(_) => "driver error",
+            Error::UrlError(_) => "url error",
+            Error::FromRowError(_) => "from row conversion error",
+            Error::FromValueError(_) => "from value conversion error",
+        }
+    }
+
+    #[cfg(any(feature = "tls-native", feature = "tls-rust"))]
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             Error::IoError(ref err) => Some(err),
@@ -110,6 +139,17 @@ impl error::Error for Error {
             Error::UrlError(ref err) => Some(err),
             Error::TlsError(ref err) => Some(err),
             Error::TlsHandshakeError(ref err) => Some(err),
+            _ => None,
+        }
+    }
+
+    #[cfg(not(any(feature = "tls-native", feature = "tls-rust")))]
+    fn cause(&self) -> Option<&dyn error::Error> {
+        match *self {
+            Error::IoError(ref err) => Some(err),
+            Error::DriverError(ref err) => Some(err),
+            Error::MySqlError(ref err) => Some(err),
+            Error::UrlError(ref err) => Some(err),
             _ => None,
         }
     }
@@ -213,6 +253,7 @@ impl<T> From<sync::PoisonError<T>> for Error {
 }
 
 impl fmt::Display for Error {
+    #[cfg(any(feature = "tls-native", feature = "tls-rust"))]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Error::IoError(ref err) => write!(f, "IoError {{ {} }}", err),
@@ -222,6 +263,19 @@ impl fmt::Display for Error {
             Error::UrlError(ref err) => write!(f, "UrlError {{ {} }}", err),
             Error::TlsError(ref err) => write!(f, "TlsError {{ {} }}", err),
             Error::TlsHandshakeError(ref err) => write!(f, "TlsHandshakeError {{ {} }}", err),
+            Error::FromRowError(_) => "from row conversion error".fmt(f),
+            Error::FromValueError(_) => "from value conversion error".fmt(f),
+        }
+    }
+
+    #[cfg(not(any(feature = "tls-native", feature = "tls-rust")))]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Error::IoError(ref err) => write!(f, "IoError {{ {} }}", err),
+            Error::CodecError(ref err) => write!(f, "CodecError {{ {} }}", err),
+            Error::MySqlError(ref err) => write!(f, "MySqlError {{ {} }}", err),
+            Error::DriverError(ref err) => write!(f, "DriverError {{ {} }}", err),
+            Error::UrlError(ref err) => write!(f, "UrlError {{ {} }}", err),
             Error::FromRowError(_) => "from row conversion error".fmt(f),
             Error::FromValueError(_) => "from value conversion error".fmt(f),
         }
