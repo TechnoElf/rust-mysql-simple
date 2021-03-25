@@ -58,8 +58,14 @@ pub enum Error {
     MySqlError(MySqlError),
     DriverError(DriverError),
     UrlError(UrlError),
+    #[cfg(feature = "tls-native")]
     TlsError(native_tls::Error),
+    #[cfg(feature = "tls-rust")]
+    TlsError(rustls::TLSError),
+    #[cfg(feature = "native-tls")]
     TlsHandshakeError(native_tls::HandshakeError<std::net::TcpStream>),
+    #[cfg(feature = "tls-rust")]
+    TlsHandshakeError(rustls::TLSError),
     FromValueError(Value),
     FromRowError(Row),
 }
@@ -173,15 +179,24 @@ impl From<::nix::Error> for Error {
     }
 }
 
+#[cfg(feature = "tls-native")]
 impl From<native_tls::Error> for Error {
     fn from(err: native_tls::Error) -> Error {
         Error::TlsError(err)
     }
 }
 
+#[cfg(feature = "tls-native")]
 impl From<native_tls::HandshakeError<std::net::TcpStream>> for Error {
     fn from(err: native_tls::HandshakeError<std::net::TcpStream>) -> Error {
         Error::TlsHandshakeError(err)
+    }
+}
+
+#[cfg(feature = "tls-rust")]
+impl From<rustls::TLSError> for Error {
+    fn from(err: rustls::TLSError) -> Error {
+        Error::TlsError(err)
     }
 }
 

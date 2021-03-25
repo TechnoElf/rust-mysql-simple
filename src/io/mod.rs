@@ -10,7 +10,10 @@ use bufstream::BufStream;
 use io_enum::*;
 #[cfg(windows)]
 use named_pipe as np;
+#[cfg(feature = "tls-native")]
 use native_tls::{Certificate, Identity, TlsConnector, TlsStream};
+#[cfg(feature = "tls-rust")]
+use rustls::{ClientSession};
 
 #[cfg(unix)]
 use std::os::unix;
@@ -138,6 +141,7 @@ impl Stream {
         }
     }
 
+    #[cfg(feature = "tls-native")]
     pub fn make_secure(self, host: url::Host, ssl_opts: SslOpts) -> MyResult<Stream> {
         if self.is_socket() {
             // won't secure socket connection
@@ -192,18 +196,34 @@ impl Stream {
             _ => unreachable!(),
         }
     }
+
+    #[cfg(feature = "tls-rust")]
+    pub fn make_secure(self, _host: url::Host, _ssl_opts: SslOpts) -> MyResult<Stream> {
+        if self.is_socket() {
+            // won't secure socket connection
+            return Ok(self);
+        }
+
+        unimplemented!();
+    }
 }
 
 #[derive(Read, Write)]
 pub enum TcpStream {
+    #[cfg(feature = "tls-native")]
     Secure(BufStream<TlsStream<net::TcpStream>>),
+    #[cfg(feature = "tls-rust")]
+    Secure(BufStream<rustls::Stream<'static, ClientSession, net::TcpStream>>),
     Insecure(BufStream<net::TcpStream>),
 }
 
 impl fmt::Debug for TcpStream {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
+            #[cfg(feature = "tls-native")]
             TcpStream::Secure(ref s) => write!(f, "Secure stream {:?}", s),
+            #[cfg(feature = "tls-rust")]
+            TcpStream::Secure(_) => write!(f, "Secure stream"),
             TcpStream::Insecure(ref s) => write!(f, "Insecure stream {:?}", s),
         }
     }

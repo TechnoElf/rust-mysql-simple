@@ -25,6 +25,9 @@ path = "src/lib.rs"
 opt-level = 3
 
 [features]
+default = ["tls-rust"]
+tls-rust = ["rustls"]
+tls-native = ["native-tls"]
 nightly = []
 
 [dev-dependencies]
@@ -37,7 +40,8 @@ bufstream = "~0.1"
 io-enum = "0.2.1"
 lru = "0.6.0"
 mysql_common = "0.24.1"
-native-tls = "0.2.3"
+native-tls = { version = "0.2.3", optional = true }
+rustls = { version = "0.19.0", optional = true }
 socket2 = "0.4"
 pem = "0.8.1"
 percent-encoding = "2.1.0"
